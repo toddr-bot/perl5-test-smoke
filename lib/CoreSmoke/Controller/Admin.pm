@@ -89,8 +89,9 @@ sub token_show ($c) {
 }
 
 sub token_cancel ($c) {
-    my $id = $c->stash('id');
-    $c->app->auth->cancel_token($id);
+    my $id  = $c->stash('id');
+    my $res = $c->app->auth->cancel_token($id);
+    $c->flash(error => $res->{error}) if $res->{error};
     $c->redirect_to('/admin/tokens');
 }
 
@@ -138,7 +139,8 @@ sub user_update_password ($c) {
         "SELECT username FROM admin_user WHERE id = ?", $id,
     )->hash;
     if ($user) {
-        $c->app->auth->update_password($user->{username}, $password);
+        my $res = $c->app->auth->update_password($user->{username}, $password);
+        $c->flash(error => $res->{error}) if $res->{error};
     }
     $c->redirect_to('/admin/users');
 }
