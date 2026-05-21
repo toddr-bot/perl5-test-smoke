@@ -7,6 +7,44 @@ use lib "$FindBin::Bin/../lib";
 use lib "$FindBin::Bin/../local/lib/perl5";
 use lib "$FindBin::Bin/lib";
 
+use CoreSmoke::Model::Search qw(validate_pagination);
+
+# -- validate_pagination unit tests ------------------------------------
+
+{
+    my ($page, $rpp, $offset) = validate_pagination({});
+    is $page,   1,  'defaults: page = 1';
+    is $rpp,    25, 'defaults: rpp = 25';
+    is $offset, 0,  'defaults: offset = 0';
+}
+
+{
+    my ($page, $rpp, $offset) = validate_pagination({ page => 3, reports_per_page => 50 });
+    is $page,   3,   'explicit: page preserved';
+    is $rpp,    50,  'explicit: rpp preserved';
+    is $offset, 100, 'explicit: offset = (3-1)*50';
+}
+
+{
+    my ($page, $rpp) = validate_pagination({ reports_per_page => 9999 });
+    is $rpp, 500, 'rpp capped at 500';
+}
+
+{
+    my ($page) = validate_pagination({ page => -5 });
+    is $page, 1, 'negative page clamped to 1';
+}
+
+{
+    my ($page) = validate_pagination({ page => 0 });
+    is $page, 1, 'zero page clamped to 1';
+}
+
+{
+    my (undef, $rpp) = validate_pagination({ reports_per_page => 0 });
+    is $rpp, 25, 'zero rpp defaults to 25';
+}
+
 use TestApp;
 
 my $h  = TestApp->new;

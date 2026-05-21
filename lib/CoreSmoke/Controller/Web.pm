@@ -3,17 +3,17 @@ use v5.42;
 use warnings;
 use experimental qw(signatures);
 use Mojo::Base 'Mojolicious::Controller', -signatures;
-use CoreSmoke::Model::Search qw(search_params);
+use CoreSmoke::Model::Search qw(search_params validate_pagination);
 
 sub _is_htmx ($c) {
     return ($c->req->headers->header('HX-Request') // '') eq 'true';
 }
 
 sub latest ($c) {
-    my $page = int($c->param('page') || 1);
-    $page = 1 if $page < 1;
-    my $rpp  = int($c->param('reports_per_page') || 25);
-    $rpp = 500 if $rpp > 500;
+    my ($page, $rpp) = validate_pagination({
+        page             => $c->param('page'),
+        reports_per_page => $c->param('reports_per_page'),
+    });
 
     # Summary filter: all|pass|fail. Anything else is treated as 'all'
     # by the model. We keep the raw param in %filter so the template
@@ -78,10 +78,7 @@ sub search ($c) {
         my $v = $c->param($key);
         $filter{$key} = $v if defined $v;
     }
-    my $page    = int($filter{page}             || 1);
-    $page = 1 if $page < 1;
-    my $rpp     = int($filter{reports_per_page} || 25);
-    $rpp = 500 if $rpp > 500;
+    my ($page, $rpp) = validate_pagination(\%filter);
 
     # Resolve `selected_perl=latest` once for the whole request via the
     # RPM-style version sort, then feed the same concrete perl_id into

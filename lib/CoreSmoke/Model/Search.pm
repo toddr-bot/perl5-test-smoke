@@ -4,7 +4,7 @@ use warnings;
 use experimental qw(signatures);
 
 use Exporter 'import';
-our @EXPORT_OK = qw(search_params);
+our @EXPORT_OK = qw(search_params validate_pagination);
 
 my @SEARCH_PARAMS = qw(
     selected_arch selected_osnm selected_osvs selected_host
@@ -18,6 +18,15 @@ my @SEARCH_PARAMS = qw(
 );
 
 sub search_params { @SEARCH_PARAMS }
+
+sub validate_pagination ($params) {
+    my $rpp    = int($params->{reports_per_page} || 25);
+    $rpp = 500 if $rpp > 500;
+    my $page   = int($params->{page} || 1);
+    $page = 1 if $page < 1;
+    my $offset = ($page - 1) * $rpp;
+    return ($page, $rpp, $offset);
+}
 
 # Compile the legacy /api/searchresults filter parameters into a
 # parameterised SQL WHERE clause. Names are preserved verbatim so
@@ -146,11 +155,7 @@ sub compile ($self, $params) {
 
 sub run ($self, $params) {
     my ($from, $where, $bind) = $self->compile($params);
-    my $rpp    = int($params->{reports_per_page} || 25);
-    $rpp = 500 if $rpp > 500;
-    my $page   = int($params->{page} || 1);
-    $page = 1 if $page < 1;
-    my $offset = ($page - 1) * $rpp;
+    my ($page, $rpp, $offset) = validate_pagination($params);
 
     my $db = $self->{sqlite}->db;
 

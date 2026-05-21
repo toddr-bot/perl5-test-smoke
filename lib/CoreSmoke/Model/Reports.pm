@@ -3,7 +3,7 @@ use v5.42;
 use warnings;
 use experimental qw(signatures);
 
-use CoreSmoke::Model::Search;
+use CoreSmoke::Model::Search qw(validate_pagination);
 use CoreSmoke::Model::Matrix;
 
 sub new ($class, %args) {
@@ -46,11 +46,7 @@ sub version ($self) {
 # aggregates -- so "fail" means "the host's latest run failed", not
 # "the host has any failing run in history".
 sub latest ($self, $params = {}) {
-    my $rpp  = int($params->{reports_per_page} || 25);
-    $rpp = 500 if $rpp > 500;
-    my $page = int($params->{page} || 1);
-    $page = 1 if $page < 1;
-    my $offset = ($page - 1) * $rpp;
+    my ($page, $rpp, $offset) = validate_pagination($params);
 
     my $sum = lc($params->{selected_summary} // 'all');
     my ($extra_where, @extra_bind) = ('');
