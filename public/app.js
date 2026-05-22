@@ -260,6 +260,14 @@
     }
   });
 
+  /* ---------- Confirm dialogs (data-confirm on submit buttons) ---------- */
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-confirm]');
+    if (el && !confirm(el.getAttribute('data-confirm'))) {
+      e.preventDefault();
+    }
+  });
+
   /* ---------- Strip default-valued params from HTMX URLs ---------- */
   document.addEventListener('htmx:configRequest', function (e) {
     var elt = e.detail.elt;
