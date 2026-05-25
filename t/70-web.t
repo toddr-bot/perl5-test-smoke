@@ -119,4 +119,19 @@ $t->get_ok('/about')->status_is(200)
   ->content_like(qr/SQLite/)
   ->content_like(qr/DB version/);
 
+# full_report DL structure: user_note <dt> must not be nested inside Trust <dd>
+subtest 'user_note renders as sibling dl entry, not nested' => sub {
+    my $fixture = $h->fixture('idefix-gff5bbe677.jsn');
+    $fixture->{sysinfo}{user_note} = 'Build ran on backup host';
+    $fixture->{sysinfo}{git_id}    = 'bb' . substr($fixture->{sysinfo}{git_id}, 2);
+    my $resp = $t->post_ok('/api/report', json => { report_data => $fixture })
+        ->status_is(200)->tx->res->json;
+    my $id = $resp->{id};
+    ok $id, "ingested report with user_note (id=$id)";
+
+    my $body = $t->get_ok("/report/$id")->status_is(200)->tx->res->body;
+    like $body, qr{</dd>\s*<dt>Note</dt>},
+        'Trust <dd> is closed before Note <dt>';
+};
+
 done_testing;
