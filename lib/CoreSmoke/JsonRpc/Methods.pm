@@ -15,6 +15,11 @@ use Sys::Hostname qw(hostname);
 our %METHODS;       # forward-declared; populated below
 my $STARTED = time;
 
+sub _require_param ($params, $name) {
+    return if defined $params->{$name} && length $params->{$name};
+    die { code => -32602, message => "Missing required param: $name" };
+}
+
 sub _system_status ($c, $params) {
     return {
         app_version  => $c->app->config->{app_version} // '2.0',
@@ -88,7 +93,10 @@ sub _list_methods ($c, $params) {
     matrix    => { plugin => 'api', call => sub ($c, $p) { $c->app->reports->matrix } },
     submatrix => {
         plugin => 'api',
-        call   => sub ($c, $p) { $c->app->reports->submatrix($p->{test}, $p->{pversion}) },
+        call   => sub ($c, $p) {
+            _require_param($p, 'test');
+            $c->app->reports->submatrix($p->{test}, $p->{pversion});
+        },
     },
     searchparameters => {
         plugin => 'api',
@@ -114,12 +122,16 @@ sub _list_methods ($c, $params) {
     reports_from_id => {
         plugin => 'api',
         call   => sub ($c, $p) {
+            _require_param($p, 'rid');
             $c->app->reports->reports_from_id($p->{rid}, $p->{limit} // 100);
         },
     },
     reports_from_date => {
         plugin => 'api',
-        call   => sub ($c, $p) { $c->app->reports->reports_from_epoch($p->{epoch}) },
+        call   => sub ($c, $p) {
+            _require_param($p, 'epoch');
+            $c->app->reports->reports_from_epoch($p->{epoch});
+        },
     },
     'api.version' => {
         plugin => 'api',
