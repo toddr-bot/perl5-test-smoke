@@ -89,6 +89,10 @@ sub token_show ($c) {
 }
 
 sub token_cancel ($c) {
+    unless (($c->param('csrf_token') // '') eq $c->csrf_token) {
+        $c->flash(error => 'Invalid form submission.');
+        return $c->redirect_to('/admin/tokens');
+    }
     my $id = $c->stash('id');
     $c->app->auth->cancel_token($id);
     $c->redirect_to('/admin/tokens');
@@ -126,6 +130,10 @@ sub user_create ($c) {
 }
 
 sub user_update_password ($c) {
+    unless (($c->param('csrf_token') // '') eq $c->csrf_token) {
+        $c->flash(error => 'Invalid form submission.');
+        return $c->redirect_to('/admin/users');
+    }
     my $id       = $c->stash('id');
     my $password = $c->param('password') // '';
 
@@ -144,6 +152,10 @@ sub user_update_password ($c) {
 }
 
 sub user_delete ($c) {
+    unless (($c->param('csrf_token') // '') eq $c->csrf_token) {
+        $c->flash(error => 'Invalid form submission.');
+        return $c->redirect_to('/admin/users');
+    }
     my $id = $c->stash('id');
 
     my $user = $c->app->sqlite->db->query(

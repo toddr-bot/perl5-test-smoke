@@ -66,11 +66,25 @@ subtest 'token show' => sub {
       ->content_like(qr/ci\@example\.com/);
 };
 
-subtest 'cancel token' => sub {
+subtest 'cancel token without CSRF is rejected' => sub {
     my $tokens = $h->app->auth->list_tokens;
     my $id = $tokens->[0]{id};
 
     $t->post_ok("/admin/tokens/$id/cancel")
+      ->status_is(302);
+
+    ok $h->app->auth->validate_token($tokens->[0]{token}),
+       'token still active after CSRF-less cancel attempt';
+};
+
+subtest 'cancel token' => sub {
+    my $tokens = $h->app->auth->list_tokens;
+    my $id = $tokens->[0]{id};
+
+    $t->get_ok("/admin/tokens/$id")->status_is(200);
+    my $csrf = $t->tx->res->dom->at('input[name=csrf_token]')->attr('value');
+
+    $t->post_ok("/admin/tokens/$id/cancel", form => { csrf_token => $csrf })
       ->status_is(302);
 
     $t->get_ok('/admin/tokens')

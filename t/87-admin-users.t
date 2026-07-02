@@ -53,23 +53,55 @@ subtest 'list shows both users' => sub {
     is scalar(@$users), 2, 'two users in list';
 };
 
-subtest 'update password of second user' => sub {
+subtest 'password change without CSRF is rejected' => sub {
     my $users = $h->app->auth->list_users;
     my ($op) = grep { $_->{username} eq 'operator' } @$users;
 
     $t->post_ok("/admin/users/$op->{id}/password", form => {
-        password => 'newoppass',
+        password => 'hijacked',
+    })->status_is(302);
+
+    ok !$h->app->auth->verify_user('operator', 'hijacked'),
+       'password unchanged after CSRF-less attempt';
+    ok $h->app->auth->verify_user('operator', 'oppass'),
+       'original password still works';
+};
+
+subtest 'update password of second user' => sub {
+    my $users = $h->app->auth->list_users;
+    my ($op) = grep { $_->{username} eq 'operator' } @$users;
+
+    $t->get_ok('/admin/users')->status_is(200);
+    my $csrf = $t->tx->res->dom->at('input[name=csrf_token]')->attr('value');
+
+    $t->post_ok("/admin/users/$op->{id}/password", form => {
+        csrf_token => $csrf,
+        password   => 'newoppass',
     })->status_is(302);
 
     ok $h->app->auth->verify_user('operator', 'newoppass'), 'new password works';
     ok !$h->app->auth->verify_user('operator', 'oppass'), 'old password rejected';
 };
 
+subtest 'deletion without CSRF is rejected' => sub {
+    my $users = $h->app->auth->list_users;
+    my ($op) = grep { $_->{username} eq 'operator' } @$users;
+
+    $t->post_ok("/admin/users/$op->{id}/delete")
+      ->status_is(302);
+
+    my $after = $h->app->auth->list_users;
+    is scalar(@$after), 2, 'user count unchanged after CSRF-less delete';
+};
+
 subtest 'self-deletion blocked' => sub {
     my $users = $h->app->auth->list_users;
     my ($me) = grep { $_->{username} eq 'admin' } @$users;
 
-    $t->post_ok("/admin/users/$me->{id}/delete")
+    $t->get_ok('/admin/users')->status_is(200);
+    my $csrf = $t->tx->res->dom->at('input[name=csrf_token]')->attr('value');
+
+    $t->post_ok("/admin/users/$me->{id}/delete", form => { csrf_token => $csrf })
       ->status_is(302);
 
     my $after = $h->app->auth->list_users;
@@ -80,7 +112,10 @@ subtest 'delete second user' => sub {
     my $users = $h->app->auth->list_users;
     my ($op) = grep { $_->{username} eq 'operator' } @$users;
 
-    $t->post_ok("/admin/users/$op->{id}/delete")
+    $t->get_ok('/admin/users')->status_is(200);
+    my $csrf = $t->tx->res->dom->at('input[name=csrf_token]')->attr('value');
+
+    $t->post_ok("/admin/users/$op->{id}/delete", form => { csrf_token => $csrf })
       ->status_is(302);
 
     my $after = $h->app->auth->list_users;
