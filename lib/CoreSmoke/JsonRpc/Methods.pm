@@ -114,12 +114,20 @@ sub _list_methods ($c, $params) {
     reports_from_id => {
         plugin => 'api',
         call   => sub ($c, $p) {
-            $c->app->reports->reports_from_id($p->{rid}, $p->{limit} // 100);
+            my $rid = $p->{rid};
+            die "rid must be a positive integer\n"
+                unless defined $rid && $rid =~ /^\d+$/ && $rid > 0;
+            $c->app->reports->reports_from_id($rid, $p->{limit} // 100);
         },
     },
     reports_from_date => {
         plugin => 'api',
-        call   => sub ($c, $p) { $c->app->reports->reports_from_epoch($p->{epoch}) },
+        call   => sub ($c, $p) {
+            my $epoch = $p->{epoch};
+            die "epoch must be a non-negative integer\n"
+                unless defined $epoch && $epoch =~ /^\d+$/;
+            $c->app->reports->reports_from_epoch($epoch);
+        },
     },
     'api.version' => {
         plugin => 'api',

@@ -67,13 +67,19 @@ sub searchresults ($c) {
 }
 
 sub reports_from_id ($c) {
+    my $rid = $c->stash('rid');
+    return $c->render(status => 400, json => { error => 'rid must be a positive integer.' })
+        unless defined $rid && $rid =~ /^\d+$/ && $rid > 0;
     return $c->render(json => $c->app->reports->reports_from_id(
-        $c->stash('rid'), $c->param('limit') // 100,
+        $rid, $c->param('limit') // 100,
     ));
 }
 
 sub reports_from_epoch ($c) {
-    return $c->render(json => $c->app->reports->reports_from_epoch($c->stash('epoch')));
+    my $epoch = $c->stash('epoch');
+    return $c->render(status => 400, json => { error => 'epoch must be a non-negative integer.' })
+        unless defined $epoch && $epoch =~ /^\d+$/;
+    return $c->render(json => $c->app->reports->reports_from_epoch($epoch));
 }
 
 # OpenAPI spec served from etc/openapi.yaml. The yaml file is the source of

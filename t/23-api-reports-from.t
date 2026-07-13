@@ -98,4 +98,48 @@ $t->get_ok("/api/reports_from_date/$future_epoch")
   ->status_is(200);
 is_deeply $t->tx->res->json, [], 'future epoch returns empty array';
 
+# ---- Invalid input: reports_from_id -----------------------------------
+
+$t->get_ok('/api/reports_from_id/abc')
+  ->status_is(400)
+  ->json_has('/error', 'non-numeric rid returns 400');
+
+$t->get_ok('/api/reports_from_id/-1')
+  ->status_is(400)
+  ->json_has('/error', 'negative rid returns 400');
+
+$t->get_ok('/api/reports_from_id/0')
+  ->status_is(400)
+  ->json_has('/error', 'zero rid returns 400');
+
+# ---- Invalid input: reports_from_date ---------------------------------
+
+$t->get_ok('/api/reports_from_date/abc')
+  ->status_is(400)
+  ->json_has('/error', 'non-numeric epoch returns 400');
+
+$t->get_ok('/api/reports_from_date/-1')
+  ->status_is(400)
+  ->json_has('/error', 'negative epoch returns 400');
+
+# epoch=0 is valid (1970-01-01), just unusual
+$t->get_ok('/api/reports_from_date/0')
+  ->status_is(200, 'epoch=0 is valid');
+
+# ---- Invalid input via JSONRPC ----------------------------------------
+
+$t->post_ok('/api', json => {
+    jsonrpc => '2.0', id => 1,
+    method  => 'reports_from_id',
+    params  => { rid => 'abc' },
+})->status_is(200)
+  ->json_has('/error', 'JSONRPC reports_from_id rejects non-numeric rid');
+
+$t->post_ok('/api', json => {
+    jsonrpc => '2.0', id => 2,
+    method  => 'reports_from_date',
+    params  => { epoch => 'xyz' },
+})->status_is(200)
+  ->json_has('/error', 'JSONRPC reports_from_date rejects non-numeric epoch');
+
 done_testing;
