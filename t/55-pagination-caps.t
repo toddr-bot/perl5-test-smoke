@@ -49,6 +49,14 @@ insert_report(
 my $data = $h->app->reports->latest({ reports_per_page => 9999, page => 1 });
 is $data->{rpp}, 500, 'latest: reports_per_page capped at 500';
 
+# -- Model::Reports::latest -- rpp floored at 1 -------------------
+
+$data = $h->app->reports->latest({ reports_per_page => -1 });
+is $data->{rpp}, 1, 'latest: negative reports_per_page clamped to 1';
+
+$data = $h->app->reports->latest({ reports_per_page => -999 });
+is $data->{rpp}, 1, 'latest: large negative reports_per_page clamped to 1';
+
 # -- Model::Reports::latest -- page floored at 1 -------------------
 
 $data = $h->app->reports->latest({ page => -5 });
@@ -71,6 +79,9 @@ my $search = $h->app->reports->searchresults({
 is $search->{reports_per_page}, 500, 'searchresults: rpp capped at 500';
 is $search->{page},              1,  'searchresults: negative page clamped to 1';
 
+$search = $h->app->reports->searchresults({ reports_per_page => -1 });
+is $search->{reports_per_page}, 1, 'searchresults: negative rpp clamped to 1';
+
 # -- Web endpoints accept extreme params without error --------------
 
 $t->get_ok('/latest?reports_per_page=9999&page=-1')
@@ -90,5 +101,15 @@ $t->get_ok('/api/searchresults?reports_per_page=9999&page=-1')
   ->status_is(200)
   ->json_is('/reports_per_page' => 500, 'API search: rpp capped at 500')
   ->json_is('/page'             => 1,   'API search: page clamped to 1');
+
+# -- Negative rpp via API endpoints ------------------------------------
+
+$t->get_ok('/api/latest?reports_per_page=-1')
+  ->status_is(200)
+  ->json_is('/rpp' => 1, 'API latest: negative rpp clamped to 1');
+
+$t->get_ok('/api/searchresults?reports_per_page=-1')
+  ->status_is(200)
+  ->json_is('/reports_per_page' => 1, 'API search: negative rpp clamped to 1');
 
 done_testing;
