@@ -213,4 +213,50 @@ my $sub_pv = $m->submatrix('op/magic.t', 'v5.40.0');
 is scalar @$sub_pv, 1, 'submatrix filtered by pversion returns 1';
 is $sub_pv->[0]{perl_id}, 'v5.40.0', 'filtered submatrix has correct perl_id';
 
+# =========================================================================
+# Test 5: malformed plevel doesn't demote a perl_id in the matrix
+# =========================================================================
+#
+# When a report has a bare-SHA git_describe, its plevel becomes the
+# sentinel "0.000000zzz000" which sorts below every real version. A
+# naive SELECT DISTINCT perl_id ORDER BY plevel DESC picks an arbitrary
+# plevel per perl_id; if it picks the sentinel, the perl_id drops out
+# of the top-5 or sorts incorrectly. GROUP BY + MAX(plevel) avoids this.
+
+# Add a 4th report for v5.42.0 with a malformed plevel sentinel.
+$db->query(<<~'SQL',
+    INSERT INTO report
+        (perl_id, plevel, osname, osversion, hostname, architecture,
+         git_id, git_describe, smoke_date, summary, report_hash)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), 'FAIL', ?)
+    SQL
+    'v5.42.0', '0.000000zzz000',
+    'linux', '6.5', 'buildbot-b', 'x86_64',
+    'deadbeef', 'deadbeef',
+    'deadbeef_hash',
+);
+my $rid4 = $db->dbh->last_insert_id(undef, undef, 'report', undef);
+
+# Give it a config + result + failure so it participates in the matrix.
+$db->query(
+    "INSERT INTO config (report_id, arguments, debugging) VALUES (?, '', 'N')",
+    $rid4,
+);
+my $cid4 = $db->dbh->last_insert_id(undef, undef, 'config', undef);
+$db->query(
+    "INSERT INTO result (config_id, io_env, summary) VALUES (?, 'perlio', 'F')",
+    $cid4,
+);
+my $resid4 = $db->dbh->last_insert_id(undef, undef, 'result', undef);
+$db->query(
+    "INSERT INTO failures_for_env (result_id, failure_id) VALUES (?, ?)",
+    $resid4, $fid{'op/magic.t'},
+);
+
+my $mat_malformed = $m->matrix;
+is $mat_malformed->{perl_versions}[0], 'v5.42.0',
+    'v5.42.0 still first despite a row with sentinel plevel';
+is $mat_malformed->{perl_versions}[1], 'v5.40.0',
+    'v5.40.0 still second after malformed-plevel row added';
+
 done_testing;
