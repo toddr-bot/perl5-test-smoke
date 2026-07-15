@@ -308,12 +308,12 @@ sub searchparameters ($self) {
                 SELECT DISTINCT smoke_branch FROM report ORDER BY smoke_branch
                 SQL
         ],
-        perl_versions => [
+        perl_versions => _sort_perl_ids_desc([
             map { $_->{perl_id} }
             @{ $db->query(<<~'SQL')->hashes->to_array }
-                SELECT DISTINCT perl_id FROM report ORDER BY plevel DESC
+                SELECT DISTINCT perl_id FROM report
                 SQL
-        ],
+        ]),
     };
 }
 
