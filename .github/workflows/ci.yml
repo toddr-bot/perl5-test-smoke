@@ -62,7 +62,7 @@ jobs:
       - name: perlcritic (severity 5, fail on violation)
         env:
           PERL5LIB: lib
-        run: perlcritic --severity 5 lib/
+        run: perlcritic --severity 5 lib/ script/
 
   docker:
     name: build + scan + push prod image
