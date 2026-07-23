@@ -5,7 +5,9 @@ use experimental qw(signatures);
 use Mojo::Base 'Mojolicious::Controller', -signatures;
 
 sub _csrf_valid ($c, $error_template) {
-    return 1 if ($c->param('csrf_token') // '') eq $c->csrf_token;
+    my $v = $c->validation;
+    $v->csrf_protect;
+    return 1 unless $v->has_error('csrf_token');
     $c->render(template => $error_template, error => 'Invalid form submission.');
     return;
 }
