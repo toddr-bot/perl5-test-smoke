@@ -90,7 +90,9 @@ sub token_show ($c) {
 }
 
 sub token_cancel ($c) {
-    unless (($c->param('csrf_token') // '') eq $c->csrf_token) {
+    my $v = $c->validation;
+    $v->csrf_protect;
+    if ($v->has_error('csrf_token')) {
         $c->flash(error => 'Invalid form submission.');
         return $c->redirect_to('/admin/tokens');
     }
@@ -132,7 +134,9 @@ sub user_create ($c) {
 }
 
 sub user_update_password ($c) {
-    unless (($c->param('csrf_token') // '') eq $c->csrf_token) {
+    my $v = $c->validation;
+    $v->csrf_protect;
+    if ($v->has_error('csrf_token')) {
         $c->flash(error => 'Invalid form submission.');
         return $c->redirect_to('/admin/users');
     }
@@ -154,7 +158,9 @@ sub user_update_password ($c) {
 }
 
 sub user_delete ($c) {
-    unless (($c->param('csrf_token') // '') eq $c->csrf_token) {
+    my $v = $c->validation;
+    $v->csrf_protect;
+    if ($v->has_error('csrf_token')) {
         $c->flash(error => 'Invalid form submission.');
         return $c->redirect_to('/admin/users');
     }
