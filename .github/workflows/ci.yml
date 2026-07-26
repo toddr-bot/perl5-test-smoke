@@ -33,18 +33,17 @@ jobs:
         uses: perl-actions/install-with-cpm@v2
         with:
           cpanfile: cpanfile
-          # snapshot is intentionally omitted (default ""). The action
-          # now treats any non-empty value as a file path, so the old
-          # `snapshot: false` breaks (YAML boolean -> string "false" ->
-          # file not found). Carton::Snapshot isn't installed yet at
-          # this point anyway. Prod gets snapshot-pinned deps via cpm
-          # in Dockerfile.base; CI is happy with latest from metacpan.
           tests: false
           # ubuntu-latest has 4 vCPUs; 1.5x oversubscription keeps all
           # cores busy while individual workers are waiting on the
           # network or disk.
           workers: 6
-          args: "--with-develop"
+          # --snapshot '': cpm auto-detects cpanfile.snapshot and tries to
+          # load it via Carton::Snapshot, which isn't installed yet at
+          # this point. Passing an empty --snapshot disables auto-detection.
+          # Prod gets snapshot-pinned deps via cpm in Dockerfile.base;
+          # CI is happy with latest compatible versions from metacpan.
+          args: "--with-develop --snapshot ''"
           # `global: true` is the action's default and what we want here:
           # we're inside an ephemeral perl:5.42-slim container, so install
           # straight into /usr/local/lib/perl5/... and /usr/local/bin/...
